@@ -52,6 +52,11 @@ class RailsBootstrap:
     def install_packages(self):
         """Install system packages."""
         logger.info("Installing packages...")
+
+        # First install gnupg which is needed for package verification
+        self.run_cmd(['apt-get', 'install', '-y', 'gnupg'])
+
+        # Now update package lists
         self.run_cmd(['apt-get', 'update'])
         self.run_cmd(['apt-get', 'install', '-y'] + self.packages)
 
