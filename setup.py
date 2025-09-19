@@ -40,6 +40,8 @@ class RailsBootstrap:
         result = subprocess.run(cmd, env=env, capture_output=True, text=True)
         if result.returncode != 0:
             logger.error(f"Command failed: {' '.join(cmd)}")
+            logger.error(f"STDOUT: {result.stdout}")
+            logger.error(f"STDERR: {result.stderr}")
             raise subprocess.CalledProcessError(result.returncode, cmd)
         return result
 
@@ -66,6 +68,10 @@ class RailsBootstrap:
         env = {'HOME': str(self.user_home)}
         self.run_cmd(['bash', '-c', 'curl https://mise.jdx.dev/install.sh | sh'], env=env)
 
+        # Verify mise was installed
+        if not (self.user_home / '.local' / 'bin' / 'mise').exists():
+            raise RuntimeError("mise installation failed")
+
     def setup_shell(self):
         """Configure shell for mise."""
         bashrc = self.user_home / '.bashrc'
@@ -87,15 +93,15 @@ fi
             f.write(config)
 
     def install_runtimes(self):
-        """Install Ruby, Node.js, and Yarn via mise."""
-        logger.info("Installing Ruby, Node.js, and Yarn...")
+        """Install Ruby and Yarn via mise."""
+        logger.info("Installing Ruby and Yarn...")
 
         env = {
             'HOME': str(self.user_home),
             'PATH': f"{self.user_home}/.local/bin:{os.environ.get('PATH', '')}"
         }
 
-        for runtime in ['ruby@latest', 'node@lts', 'yarn@latest']:
+        for runtime in ['ruby@latest', 'yarn@latest']:
             self.run_cmd([self.mise_bin, 'install', runtime], env=env)
             self.run_cmd([self.mise_bin, 'use', '--global', runtime], env=env)
 
