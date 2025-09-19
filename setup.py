@@ -21,8 +21,8 @@ class RailsBootstrap:
     """Bootstrap Ruby on Rails development environment on Ubuntu."""
 
     def __init__(self):
-        self.user = os.environ.get('SUDO_USER', 'ubuntu')
-        self.user_home = Path(f'/home/{self.user}')
+        self.user = 'root'
+        self.user_home = Path('/root')
         self.mise_bin = str(self.user_home / '.local' / 'bin' / 'mise')
 
         self.packages = [
@@ -44,15 +44,8 @@ class RailsBootstrap:
         return result
 
     def ensure_user(self):
-        """Ensure user exists."""
-        try:
-            self.run_cmd(['id', self.user])
-        except subprocess.CalledProcessError:
-            self.run_cmd(['useradd', '-m', '-s', '/bin/bash', self.user])
-            self.run_cmd(['usermod', '-aG', 'sudo', self.user])
-
+        """Ensure root home directory exists."""
         self.user_home.mkdir(parents=True, exist_ok=True)
-        self.run_cmd(['chown', f'{self.user}:{self.user}', str(self.user_home)])
 
     def install_packages(self):
         """Install system packages."""
@@ -68,11 +61,10 @@ class RailsBootstrap:
         logger.info("Installing mise...")
         local_bin = self.user_home / '.local' / 'bin'
         local_bin.mkdir(parents=True, exist_ok=True)
-        self.run_cmd(['chown', '-R', f'{self.user}:{self.user}', str(self.user_home / '.local')])
 
         # Install mise
         env = {'HOME': str(self.user_home)}
-        self.run_cmd(['bash', '-c', 'curl https://mise.jdx.dev/install.sh | sh'], user=self.user, env=env)
+        self.run_cmd(['bash', '-c', 'curl https://mise.jdx.dev/install.sh | sh'], env=env)
 
     def setup_shell(self):
         """Configure shell for mise."""
@@ -93,7 +85,6 @@ fi
 
         with open(bashrc, 'a') as f:
             f.write(config)
-        self.run_cmd(['chown', f'{self.user}:{self.user}', str(bashrc)])
 
     def install_runtimes(self):
         """Install Ruby, Node.js, and Yarn via mise."""
@@ -105,8 +96,8 @@ fi
         }
 
         for runtime in ['ruby@latest', 'node@lts', 'yarn@latest']:
-            self.run_cmd([self.mise_bin, 'install', runtime], user=self.user, env=env)
-            self.run_cmd([self.mise_bin, 'use', '--global', runtime], user=self.user, env=env)
+            self.run_cmd([self.mise_bin, 'install', runtime], env=env)
+            self.run_cmd([self.mise_bin, 'use', '--global', runtime], env=env)
 
     def setup_postgresql(self):
         """Setup PostgreSQL."""
@@ -118,12 +109,12 @@ fi
         try:
             result = self.run_cmd([
                 'sudo', '-u', 'postgres', 'psql', '-t', '-c',
-                f"SELECT 1 FROM pg_user WHERE usename = '{self.user}';"
+                f"SELECT 1 FROM pg_user WHERE usename = 'root';"
             ])
             if '1' not in result.stdout:
                 self.run_cmd([
                     'sudo', '-u', 'postgres', 'psql', '-c',
-                    f"CREATE USER {self.user} WITH SUPERUSER CREATEDB PASSWORD '{self.user}';"
+                    f"CREATE USER root WITH SUPERUSER CREATEDB PASSWORD 'root';"
                 ])
         except subprocess.CalledProcessError:
             pass
@@ -143,7 +134,7 @@ fi
         gem install rails --no-document
         '''
 
-        self.run_cmd(['bash', '-c', cmd], user=self.user, env=env)
+        self.run_cmd(['bash', '-c', cmd], env=env)
 
     def run(self):
         """Execute the bootstrap process."""
@@ -161,7 +152,7 @@ fi
         self.setup_postgresql()
         self.install_rails()
 
-        logger.info(f"✅ Setup complete! Switch to user: sudo su - {self.user}")
+        logger.info("✅ Setup complete! Rails environment ready.")
 
 if __name__ == '__main__':
     RailsBootstrap().run()
