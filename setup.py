@@ -98,15 +98,15 @@ fi
             f.write(config)
 
     def install_runtimes(self):
-        """Install Ruby and Yarn via mise."""
-        logger.info("Installing Ruby and Yarn...")
+        """Install Ruby, Node.js, and Yarn via mise."""
+        logger.info("Installing Ruby, Node.js, and Yarn...")
 
         env = {
             'HOME': str(self.user_home),
             'PATH': f"{self.user_home}/.local/bin:{os.environ.get('PATH', '')}"
         }
 
-        for runtime in ['ruby@latest', 'yarn@latest']:
+        for runtime in ['ruby@latest', 'node@lts', 'yarn@latest']:
             self.run_cmd([self.mise_bin, 'install', runtime], env=env)
             self.run_cmd([self.mise_bin, 'use', '--global', runtime], env=env)
 
